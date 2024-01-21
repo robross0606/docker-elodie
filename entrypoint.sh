@@ -4,12 +4,13 @@ set -eu
 
 PYTHON="su-exec ${PUID}:${PGID} python"
 ELODIE="${PYTHON} /elodie/elodie.py"
+INOTIFY_BIN="inotifywait"
 
 IMPORT_OPTIONS="--destination ${DESTINATION}"
 
 if [ "${TRASH:-}" ]; then
-  mkdir -p "${XDG_DATA_HOME:-~/.local/share}"
-  ln -s "${TRASH}" "${XDG_DATA_HOME:-${HOME}/.local/share/Trash"
+  mkdir -p "${XDG_DATA_HOME:-${HOME}/.local/share}"
+  ln -s "${TRASH}" "${XDG_DATA_HOME:-${HOME}/.local/share/Trash}"
   IMPORT_OPTIONS="${IMPORT_OPTIONS} --trash"
 fi
 
@@ -29,13 +30,17 @@ if [ "${DEBUG:-}" ]; then
   IMPORT_OPTIONS="${IMPORT_OPTIONS} --debug"
 fi
 
+if [ "${INOTIFYWAIT_POLLING:-}" ]; then
+  INOTIFY_BIN="inotifywait-polling"
+fi
+
 if [ ! -e "${ELODIE_APPLICATION_DIRECTORY}/config.ini" ] && [ "${MAPQUEST_KEY:-}" ] ; then
  echo -e "[MapQuest]\nkey=${MAPQUEST_KEY}\nprefer_english_names=False" > "${ELODIE_APPLICATION_DIRECTORY}/config.ini"
 fi
 
 case "${1:-watch}" in
   watch)
-    inotifywait -e close_write -mr "${SOURCE}" | while read -r EV;
+    ${INOTIFY_BIN} -e close_write -mr "${SOURCE}" | while read -r EV;
     do
       (
         NOW=$($PYTHON -c "import time;print(time.time());")
